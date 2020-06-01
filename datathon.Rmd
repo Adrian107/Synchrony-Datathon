@@ -1,0 +1,50 @@
+
+```{r}
+library(car) 
+library(caret)
+train=read.csv("train.csv")
+test=read.csv("test.csv")
+test_1=test[c(1:24),c(2:26)]
+train_1=train[c(1:288),c(2:26)]
+
+RMSE = function(real, pred){
+  sqrt(mean((real-pred)^2))
+}
+plot(train_1$index,train_1$Interest,type = "l")
+plot(test_1$index,test_1$Sales,type = "l")
+new_train=train_1[c(225:288),]
+plot(train_1$index,train_1$Interest,type = "l")
+plot(train_1$index,train_1$Sales,type = "l")
+x=cbind(train_1$HPI,train_1$RTFS,train_1$CSUSHPINSA,train_1$CCMS,train_1$Sales)
+colnames(x)=c("HPI","RTFS","CSUSHPINSA","CCMS","Sales")
+featurePlot(x = x, y = train_1$index)
+```
+
+
+```{r}
+##random forest
+library(caret)
+library(randomForest)
+library(gbm)
+library(DMwR)
+boost = gbm(train_1$Sales ~ ., data = train_1, distribution = "gaussian", 
+                    n.trees = 5000, interaction.depth = 4, shrinkage = 0.01)
+tibble::as_tibble(summary(boost))
+
+```
+
+
+```{r}
+##fitting model
+set.seed(1)
+library(glmnet)
+library(DMwR)
+x_train=cbind(train_1$HPI,train_1$RTFS,train_1$CSUSHPINSA,train_1$CCMS)
+x_test=cbind(test_1$HPI,test_1$RTFS,test_1$CSUSHPINSA,test_1$CCMS)
+
+ridge.mod <- cv.glmnet(x_train, train_1$Sales, alpha = 1)                    
+bestlam <- ridge.mod$lambda.min
+ypred=predict(ridge.mod,x_test,s = bestlam)
+RMSE(test_1$Sales,ypred)
+```
+
